@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require('uuid'); // third-party-module -> membuat id random
 const { validationResult } = require("express-validator");
+const jwt = require('jsonwebtoken'); // third-party-module -> token random
 
 let data = [
     {
@@ -20,19 +21,28 @@ let data = [
 
 // READ all data 
 exports.readDataUsers = (req, res) => {
-    if (data.length == 0) {
-        res.status(400).json({
-            status: 400,
-            message: "Blank Data!, you have to enter your data",
-            data,
-        });
-    }  else {
-        res.status(200).json({
-            status: 200,
-            message: 'Get users data, success',
-            data,
-        });
-    }
+    
+    jwt.verify(req.token, 'secret', (err, authData) => {
+        if (err) {
+            res.status(403).json({
+                status: 403,
+            message: "upss, you are not allowed to access this API. Enter the token first, try login in to get access rights/token.",
+            });
+        } else if (data.length == 0) {
+            res.status(400).json({
+                status: 400,
+                message: "Blank Data!, you have to enter your data",
+                data: null
+            });
+        }  else {
+            res.status(200).json({
+                status: 200,
+                message: 'Get users data, success',
+                authData,
+            });
+        }
+    });
+
 };
 
 // READ data by id
@@ -50,6 +60,7 @@ exports.readDataUser = (req, res) => {
         res.status(404).json({
             status: 404,
             message: `Data with the id ${id} not found!`,
+            data: null
         });
     }
 };
@@ -112,8 +123,7 @@ exports.updateDataUsers = (req, res) => {
         status: 200,
         message: `User with the username ${user.username} has been updated`,
         data: user,
-    })
-
+    });
 };
 
 
@@ -129,6 +139,7 @@ exports.deleteDataUsers = (req, res) => {
         res.status(404).json({
             status: 404,
             message: `Data with the id ${id} not found!`,
+            data: null
         })
         return false;
     }
@@ -138,6 +149,54 @@ exports.deleteDataUsers = (req, res) => {
     res.status(200).json({
         status: 200,
         message: `User with the id ${id} deleted from the database.`,
+        data,
     });
 };
 
+// POST data user login 
+// generate jwt
+exports.createUserLogin = (req, res) => {
+    const { username, password } = req.body;
+
+    jwt.sign({ data }, 'secret', { expiresIn: '60s' }, (err, token) => {
+        data.map((i) => {
+            // jika username dan password sama kirim token
+            if (i.username == username && i.password == password) {
+                res.status(201).json({
+                    status: 201,
+                    message: 'login succesfull',
+                    token,
+                });
+            } 
+
+            res.status(400).json({
+                status: 400,
+                message: 'invalid username or password',
+                token: null,
+            });
+        });
+    });
+};
+
+// membuat fungsi verifikasi token
+exports.verifyToken = (req, res, next) => {
+    // mengambil header 
+    const bearerHeader = req.headers.authorization;
+    if (typeof bearerHeader !== 'undefined' ) {
+        // split header dengan method split
+        const bearer = bearerHeader.split(' ');
+        // menampung token
+        const bearerToken = bearer[1];
+        // set token
+        req.token = bearerToken;
+        // middleware next
+        next();
+
+    } else {
+        // kirim forbidden
+        res.status(403).json({
+            status: 403,
+            message: "upss, you are not allowed to access this API. Enter the token first, try login in to get access rights/token.",
+        });
+    }
+};

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 
-const {creatDataUsers, readDataUsers, readDataUser, updateDataUsers, deleteDataUsers} = require('../controllers/users');
+const {creatDataUsers, readDataUsers, readDataUser, updateDataUsers, deleteDataUsers, createUserLogin, verifyToken} = require('../controllers/users');
 
 // CREAT data -> method --> post
 router.post('/users',
@@ -15,7 +15,7 @@ router.post('/users',
 
 
 // READ all data users -> method --> get
-router.get('/users', readDataUsers);
+router.get('/users', verifyToken, readDataUsers);
 
 // READ data user by id -> method --> get
 router.get('/users/:id', readDataUser);
@@ -30,6 +30,9 @@ router.put('/users/:id', [
 
 // DELETE user data -> method --> delete
 router.delete('/users/:id', deleteDataUsers);
+
+// CREATE user login 
+router.post('/users/login', createUserLogin);
 
 
 
